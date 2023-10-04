@@ -67,20 +67,21 @@ namespace ValidatorCSV
             public string DATE_MODIF { get; set; }
             public string EMP_ID { get; set; }
             public string USER_ID_MO { get; set; }
+            public string CONFIRM { get; set; }
         }
 
         static void Main(string[] args)
         {
-            Console.WriteLine("Введите путь к файлу CSV:");
-            string filePath = Console.ReadLine(); // Пользователь вводит путь к файлу CSV
+            Console.WriteLine("Введите имя файла CSV (с расширением):");
+            string fileName = Console.ReadLine(); // Пользователь вводит имя файла CSV
+            string filePath = Path.Combine("D:\\Documents", fileName);
 
-            Console.WriteLine("Выберите операцию: 1 - Устранение дубликатов, 2 - Поиск ошибок");
 
-            int operationChoice;
-
-            if (!int.TryParse(Console.ReadLine(), out operationChoice))
+            Console.WriteLine("Выберите операцию: 1 - Удаление дубликатов, 2 - Поиск ошибок");
+            int operationSelect;
+            if (!int.TryParse(Console.ReadLine(), out operationSelect))
             {
-                Console.WriteLine("Некорректный выбор операции. Завершение программы.");
+                Console.WriteLine("Нкорректный выбор операции.");
                 return;
             }
 
@@ -88,92 +89,82 @@ namespace ValidatorCSV
             {
                 HasHeaderRecord = true,
                 Delimiter = ";",
-                MissingFieldFound = null,
+                MissingFieldFound = null, // Игнорировать пропущенные поля
                 BadDataFound = null,
             };
 
             var encoding1251 = Encoding.GetEncoding(1251);
-
             using (var reader = new StreamReader(filePath, encoding1251))
             using (var csv = new CsvReader(reader, csvConfig))
             {
-                var record = csv.GetRecord<CsvRecord>();
 
-                switch (operationChoice)
+                int lineNumber = 1;
+                var uniqueENPSet = new HashSet<string>();
+                var records = new List<CsvRecord>();
+
+                while (csv.Read())
                 {
-                    case 1:
-                        RemoveDuplicatesAndSave(record, csv, csvConfig);
-                        break;
-                    case 2:
-                        DetectAndPrintErrors(record, csv);
-                        break;
-                    default:
-                        Console.WriteLine("Некорректный выбор операции.");
-                        break;
-                }
-            }
-            Console.WriteLine("Завершено.");
-            Console.ReadLine();
-        }
+                    lineNumber++;
 
-        static void DetectAndPrintErrors(dynamic rec, dynamic csv)
-        {
-            int lineNumber = 1;
+                    var record = csv.GetRecord<CsvRecord>();
 
-            while (csv.Read())
-            {
-                lineNumber++;
+                    var validationResult = ValidateCsvRecord(record);
 
-                var validationResult = ValidateCsvRecord(rec);
-
-                if (!validationResult.IsValid)
-                {
-                    Console.WriteLine($"Строка {lineNumber} содержит ошибки:");
-
-                    foreach (var error in validationResult.Errors)
+                    switch(operationSelect)
                     {
-                        Console.WriteLine($"Столбец '{error.PropertyName}': {error.ErrorMessage}");
+                        case 1:
+                            if (uniqueENPSet.Add(record.ENP))
+                            {
+                                records.Add(record);
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Строка {lineNumber} ENP: {record.ENP} дубликат");
+                            }
+                            break;
+                        case 2:
+                            if (!validationResult.IsValid)
+                            {
+                                Console.WriteLine($"Строка {lineNumber} ENP: {record.ENP} содержит ошибки:");
+
+                                foreach (var error in validationResult.Errors)
+                                {
+                                    Console.WriteLine($"Столбец '{error.PropertyName}': {error.ErrorMessage}");
+                                }
+                            }
+                            break;
+                        default:
+                            Console.WriteLine("Нкорректный выбор операции.");
+                            break;
                     }
                 }
-            }
-        }
-
-        // Проверяем наличие дубликатов в столбце ENP
-        static void RemoveDuplicatesAndSave(dynamic rec, dynamic csv, dynamic conf)
-        {
-            var uniqueENPSet = new HashSet<string>();
-            var records = new List<CsvRecord>();
-            int lineNumber = 1;
-
-            while (csv.Read())
-            {
-                lineNumber++;
-
-                if (uniqueENPSet.Add(rec.ENP))
+                // Сохранить записи в новый файл CSV
+                if (operationSelect == 1)
                 {
-                    records.Add(rec); // ENP уникален, добавим запись в список
+                    SaveRecordsToCsv(records);
                 }
-                else
-                {
-                    Console.WriteLine($"Строка {lineNumber} - дубликат");
-                }
+
+                Console.WriteLine("Завершено.");
+                Console.ReadLine();
             }
-            
-            SaveRecordsToCsv(records, conf); // Сохранить записи в новый файл CSV
         }
 
         // Метод для валидации записи CSV
-        static ValidationResult ValidateCsvRecord(dynamic rec)
+        static ValidationResult ValidateCsvRecord(dynamic record)
         {
             var validator = new CsvRecordValidator();
-            return validator.Validate(rec);
+            return validator.Validate(record);
         }
 
-        // Сохранение записей в новый файл CSV
-        static void SaveRecordsToCsv(List<CsvRecord> records, dynamic conf)
+        // Save records to a new CSV file
+        static void SaveRecordsToCsv(List<CsvRecord> records)
         {
+            var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                Delimiter = ";",
+            };
             using (var writer = new StreamWriter("D:\\Documents\\P_output.csv", false, Encoding.GetEncoding(1251)))
-            using (var csv = new CsvWriter(writer, conf))
+            using (var csv = new CsvWriter(writer, csvConfig))
             {
                 csv.WriteRecords(records);
             }
@@ -240,6 +231,8 @@ namespace ValidatorCSV
             RuleFor(record => record.DATE_MODIF).MaximumLength(10);
             RuleFor(record => record.EMP_ID).MaximumLength(22);
             RuleFor(record => record.USER_ID_MO).MaximumLength(20);
+            RuleFor(record => record.CONFIRM).Length(1);
+
         }
     }
 }
