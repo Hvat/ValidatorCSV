@@ -226,8 +226,7 @@ namespace ValidatorCSV
             RuleFor(record => record.KOD_PODRAZD).MaximumLength(64);
             RuleFor(record => record.KOD_UCHASTKA).MaximumLength(64);
             RuleFor(record => record.SNILS_DOC).MaximumLength(11);
-            RuleFor(record => record.KATEGOR_MED).NotEmpty().WithMessage("Поле KATEGOR_MED не должно быть пустым.")
-                .MaximumLength(1);
+            RuleFor(record => record.KATEGOR_MED).MaximumLength(1);
             RuleFor(record => record.DATE_MODIF).MaximumLength(10);
             RuleFor(record => record.EMP_ID).MaximumLength(22);
             RuleFor(record => record.USER_ID_MO).MaximumLength(20);
