@@ -162,6 +162,7 @@ namespace ValidatorCSV
             var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
             {
                 Delimiter = ";",
+                NewLine = ";",
             };
             using (var writer = new StreamWriter("D:\\Documents\\P_output.csv", false, Encoding.GetEncoding(1251)))
             using (var csv = new CsvWriter(writer, csvConfig))
@@ -231,7 +232,6 @@ namespace ValidatorCSV
             RuleFor(record => record.EMP_ID).MaximumLength(22);
             RuleFor(record => record.USER_ID_MO).MaximumLength(20);
             RuleFor(record => record.CONFIRM).Length(1);
-
         }
     }
 }
